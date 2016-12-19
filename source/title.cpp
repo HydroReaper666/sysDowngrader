@@ -39,9 +39,9 @@ std::vector<TitleInfo> getTitleInfos(FS_MediaType mediaType)
 	TitleInfo tmpTitleInfo;
 
 	u32 archiveLowPath[4] = {0, 0, mediaType, 0};
-	const FS_Archive iconArchive = {0x2345678A, {PATH_BINARY, 0x10, (u8*)archiveLowPath}};
+	const FS_Path archivePath = {PATH_BINARY, sizeof(archiveLowPath), archiveLowPath};
 	const u32 fileLowPath[5] = {0, 0, 2, 0x6E6F6369, 0};
-	const FS_Path filePath = {PATH_BINARY, 0x14, (const u8*)fileLowPath};
+	const FS_Path filePath = {PATH_BINARY, sizeof(fileLowPath), fileLowPath};
 
 
 	if((res = AM_GetTitleCount(mediaType, &count))) throw titleException(_FILE_, __LINE__, res, "Failed to get title count!");
@@ -66,7 +66,7 @@ std::vector<TitleInfo> getTitleInfos(FS_MediaType mediaType)
 		// Copy the title ID into our archive low path
 		memcpy(archiveLowPath, &titleIdList[i], 8);
 		icon.clear();
-		if(!FSUSER_OpenFileDirectly(&fileHandle, iconArchive, filePath, FS_OPEN_READ, 0))
+		if(!FSUSER_OpenFileDirectly(&fileHandle, ARCHIVE_SAVEDATA_AND_CONTENT, archivePath, filePath, FS_OPEN_READ, 0))
 		{
 			// Nintendo decided to release a title with an icon entry but with size 0 so this will fail.
 			// Ignoring errors because of this here.
@@ -143,7 +143,7 @@ void deleteTitle(FS_MediaType mediaType, u64 titleID)
 bool launchTitle(FS_MediaType mediaType, u8 flags, u64 titleID)
 {
 	Result res;
-	u8 isN3DS;
+	bool isN3DS;
 	u32 appID;
 	const u32 appIDTable[9] = {0x101, 0x103, 0x110, 0x112, 0x113, 0x114, 0x115, 0x116, 0x117};
 	const u32 tIDTableOld3DS[9][3] = {
@@ -173,8 +173,6 @@ bool launchTitle(FS_MediaType mediaType, u8 flags, u64 titleID)
 	const u32 (*tIDTable)[3] = ((isN3DS) ? tIDTableNew3DS : tIDTableOld3DS);
 
 
-	aptOpenSession();
-
 	if(titleID>>32 == 0x40030) // Applet
 	{
 		// Search the the title ID lower word in our title ID table
@@ -196,30 +194,24 @@ bool launchTitle(FS_MediaType mediaType, u8 flags, u64 titleID)
 
 		if((res = APT_PrepareToStartSystemApplet((NS_APPID)appID)))
 		{
-			aptCloseSession();
 			throw titleException(_FILE_, __LINE__, res, "Failed to prepare for system applet start!");
 		}
-		if((res = APT_StartSystemApplet((NS_APPID)appID, 0, 0, nullptr)))
+		if((res = APT_StartSystemApplet((NS_APPID)appID, nullptr, 0, 0)))
 		{
-			aptCloseSession();
 			throw titleException(_FILE_, __LINE__, res, "Failed to start system applet!");
 		}
-		aptSetStatus(APP_EXITING);
 	}
 	else // App
 	{
-		if((res = APT_PrepareToDoAppJump(flags, titleID, mediaType)))
+		if((res = APT_PrepareToDoApplicationJump(flags, titleID, mediaType)))
 		{
-			aptCloseSession();
 			throw titleException(_FILE_, __LINE__, res, "Failed to prepare for app start!");
 		}
-		if((res = APT_DoAppJump(0, 0, nullptr, nullptr)))
+		if((res = APT_DoApplicationJump(nullptr, 0, nullptr)))
 		{
-			aptCloseSession();
 			throw titleException(_FILE_, __LINE__, res, "Failed to start app!");
 		}
 	}
 
-	aptCloseSession();
 	return true; // Applet launch was successful
 }
