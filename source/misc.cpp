@@ -46,7 +46,14 @@ int getAMu() {
   // verify am:u access
   srvGetServiceHandleDirect(&amHandle, "am:u");
   if (amHandle) {
+    aptInit();
+    fsInit();
+    sdmcArchiveInit();
+    amInit();
+    printf("Initted services...\n");
+
     svcCloseHandle(amHandle);
+
     printf("\x1b[32mGot am:u handle!\x1b[0m\n\n");
     return 0;
   }

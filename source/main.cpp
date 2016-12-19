@@ -120,7 +120,7 @@ void installUpdates(bool downgrade)
 	std::vector<TitleInfo> installedTitles = getTitleInfos(MEDIATYPE_NAND);
 	std::vector<TitleInstallInfo> titles;
 
-	u8 is_n3ds = 0;
+	bool is_n3ds = 0;
 	APT_CheckNew3DS(&is_n3ds);
 
 	Buffer<char> tmpStr(256);
@@ -372,9 +372,7 @@ int main()
 
 					svcSleepThread(10000000000LL);
 
-					aptOpenSession();
 					APT_HardwareResetAsync();
-					aptCloseSession();
 
 					once = true;
 				}
