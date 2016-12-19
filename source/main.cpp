@@ -123,6 +123,7 @@ void installUpdates(bool downgrade)
 	bool is_n3ds = 0;
 	APT_CheckNew3DS(&is_n3ds);
 
+	bool verified = false;
 	Buffer<char> tmpStr(256);
 	Result res;
 	TitleInstallInfo installInfo;
@@ -241,6 +242,7 @@ void installUpdates(bool downgrade)
 												}
 
 											}
+											verified = true;
 
 										}
 
@@ -251,14 +253,17 @@ void installUpdates(bool downgrade)
 
 						}
 					}
-
 		 		}
 			}
-			printf("\n\n\x1b[32mVerified firmware files successfully!\n\n\x1b[0m\n\n");
-			printf("Installing firmware files...\n");
 		}
 
 	}
+
+	if (!verified) {
+		throw titleException(_FILE_, __LINE__, res, "\x1b[31mNot found valid update set! File is corrupt or incorrect!\x1b[0m\n\n");
+	}
+	printf("\n\n\x1b[32mVerified firmware files successfully!\n\n\x1b[0m\n\n");
+	printf("Installing firmware files...\n");
 
 	for(auto it : filesDirs)
 	{
