@@ -29,6 +29,8 @@ Option:
 
 AccessControlInfo:
   FileSystemAccess:
+   - CategorySystemApplication
+   - CategoryFileSystemTool
    - DirectSdmc
   IoAccessControl:
 
