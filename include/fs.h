@@ -26,7 +26,6 @@
 #include <vector>
 #include <cstdio>
 #include <3ds.h>
-//#include "zip.h"
 
 #define FS_PATH_MAX_LENGTH         (0x106)
 #define MAX_BUF_SIZE               (0x200000) // 2 MB
@@ -134,23 +133,12 @@ namespace fs
 	void copyDir(const std::u16string& src, const std::u16string& dst, std::function<void (const std::u16string& fsObject, u32 totalPercent, u32 filePercent)> callback=nullptr, FS_Archive& srcArchive=sdmcArchive, FS_Archive& dstArchive=sdmcArchive);
 	void deleteDir(const std::u16string& path, FS_Archive& archive=sdmcArchive);
 
-
-	// Zip functions
-	/*void copyFileToZip(const std::u16string& src, const std::string& zipPath, zipFile& zip, std::function<void (const std::u16string& file, u32 percent)> callback=nullptr, FS_Archive& srcArchive=sdmcArchive);
-	void makeDirInZip(const std::string& zipPath, zipFile& zip);
-	void zipDir(const std::u16string& src, const std::u16string& zipDst, std::function<void (const std::u16string& fsObject, u32 totalPercent, u32 filePercent)> callback=nullptr, FS_Archive& srcArchive=sdmcArchive);
-	void unzipToDir(const std::u16string& zipSrc, const std::u16string& dst, std::function<void (const std::u16string& fsObject, u32 totalPercent, u32 filePercent)> callback=nullptr, FS_Archive& dstArchive=sdmcArchive);
-	void addToZipPath(std::string& path, const std::u16string& dirOrFile, bool isDir);
-	void removeFromZipPath(std::string& path);*/
-
-
 	// Misc functions
 	void addToPath(std::u16string& path, const std::u16string& dirOrFile);
 	void removeFromPath(std::u16string& path);
 } // namespace fs
 
 
-//Result FSUSER_ControlArchive(Handle *handle, FS_Archive *archive);
 void sdmcArchiveInit();
 void sdmcArchiveExit();
 
