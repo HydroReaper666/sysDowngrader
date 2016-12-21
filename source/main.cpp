@@ -20,13 +20,13 @@
 #include <cstdio>
 #include <string>
 #include <vector>
+#include <inttypes.h>
 #include <3ds.h>
 #include "error.h"
 #include "fs.h"
 #include "misc.h"
 #include "title.h"
 #include "hashes.h"
-#include "sha256.h"
 
 #define _FILE_ "main.cpp" // Replacement for __FILE__ without the path
 
@@ -120,10 +120,18 @@ void installUpdates(bool downgrade)
 	std::vector<TitleInfo> installedTitles = getTitleInfos(MEDIATYPE_NAND);
 	std::vector<TitleInstallInfo> titles;
 
+	std::unordered_map<u64, std::unordered_map<u64, std::unordered_map<u64, std::array<uint8_t,32>>>> devices;
+	std::unordered_map<u64, std::unordered_map<u64, std::array<uint8_t,32>>> regions;
+	std::unordered_map<u64, std::array<uint8_t,32>> hashes;
+	std::array<uint8_t,32> cmphash;
+
+	u8 calchash[32];
+	u64 ciaSize, offset = 0;
+	u32 bytesRead;
+
 	bool is_n3ds = 0;
 	APT_CheckNew3DS(&is_n3ds);
 
-	bool verified = false;
 	Buffer<char> tmpStr(256);
 	Result res;
 	TitleInstallInfo installInfo;
@@ -132,6 +140,7 @@ void installUpdates(bool downgrade)
 
 	printf("Getting firmware files information...\n\n");
 
+	// determine firm cia version
 	for(auto it : filesDirs)
 	{
 		if(!it.isDir)
@@ -152,7 +161,7 @@ void installUpdates(bool downgrade)
 			if(ciaFileInfo.titleID == 0x0004013800000002LL && is_n3ds == 1 && ciaFileInfo.version < 11872){
 				printf("Installing O3DS pack on N3DS will brick unless you swap the NCSD and crypto slot!\n");
 				printf("!! DO NOT CONTINUE UNLESS !!\n!! YOU ARE ON A9LH OR REDNAND !!\n\n");
-				printf("(A) continue\n(a) cancel\n\n");
+				printf("(A) continue\n(B) cancel\n\n");
 				while(aptMainLoop())
 				{
 					hidScanInput();
@@ -165,106 +174,101 @@ void installUpdates(bool downgrade)
 				}
 			}
 
-			printf("Getting firmware files version...\n\n");
-			printf("NATIVE_FIRM (");
+			printf("Verifying firmware files...\n");
 
-			tmpStr.clear();
-			utf16_to_utf8((u8*) &tmpStr, (u16*) it.name.c_str(), 255);
-			printf("%s", &tmpStr);
-
-			printf(") is v");
-			printf("%i\n\n", ciaFileInfo.version);
-
-			printf("Verifying firmware files...\n\n");
-
-			for(auto const &firmVersionMap : firmVersions) {
-
-				if(firmVersionMap.first == ciaFileInfo.version) {
-
-					for(auto it2 : filesDirs) {
-						for(auto const &devicesVersionMap : firmVersionMap.second) {
-
-							tmpStr.clear();
-							utf16_to_utf8((u8*) &tmpStr, (u16*) it2.name.c_str(), 255);
-
-							if(&tmpStr == devicesVersionMap.first) {
-
-								for(auto it3 : filesDirs) {
-									for(auto const &regionVersionMap : devicesVersionMap.second) {
-
-										tmpStr.clear();
-										utf16_to_utf8((u8*) &tmpStr, (u16*) it3.name.c_str(), 255);
-
-										if(&tmpStr == regionVersionMap.first) {
-
-											if(filesDirs.size() > regionVersionMap.second.size()) throw titleException(_FILE_, __LINE__, res, "Too many titles in /updates/ found!\n");
-											if(filesDirs.size() < regionVersionMap.second.size()) throw titleException(_FILE_, __LINE__, res, "Too few titles in /updates/ found!\n");
-
-											for(auto it4 : filesDirs) {
-
-												tmpStr.clear();
-												utf16_to_utf8((u8*) &tmpStr, (u16*) it4.name.c_str(), 255);
-
-                        									fs::File ciaFile(u"/updates/" + it4.name, FS_OPEN_READ);
-                      										Buffer<u8> shaBuffer(MAX_BUF_SIZE, false);
-												u32 blockSize;
-                      										u64 ciaSize, offset = 0;
-                      										ciaSize = ciaFile.size();
-												SHA256 sha256stream;
-
-												sha256stream.reset();
-
-												for(u32 i=0; i<=ciaSize / MAX_BUF_SIZE; i++)
-												{
-													blockSize = ((ciaSize - offset<MAX_BUF_SIZE) ? ciaSize - offset : MAX_BUF_SIZE);
-
-													if(blockSize>0)
-													{
-														try
-														{
-															ciaFile.read(&shaBuffer, blockSize);
-														} catch(fsException& e)
-														{
-															throw titleException(_FILE_, __LINE__, res, "Could not read file!");
-														}
-
-														sha256stream.add(&shaBuffer, blockSize);
-														offset += blockSize;
-													}
-												}
-
-												printf("%s", &tmpStr);
-
-												if(sha256stream.getHash() != regionVersionMap.second.find(&tmpStr)->second) {
-													throw titleException(_FILE_, __LINE__, res, "\x1b[31mHash mismatch! File is corrupt or incorrect!\x1b[0m\n\n");
-												} else {
-													printf("\x1b[32m  Verified\x1b[0m\n");
-												}
-
-											}
-											verified = true;
-
-										}
-
-									}
-								}
-
-							}
-
-						}
-					}
-		 		}
+			if (firms.find(ciaFileInfo.version) == firms.end()) {
+				throw titleException(_FILE_, __LINE__, res, "\x1b[31mDid not find known firmware files!\x1b[0m\n");
+			} else {
+				devices = firms.find(ciaFileInfo.version)->second;
 			}
 		}
-
 	}
 
-	if (!verified) {
-		throw titleException(_FILE_, __LINE__, res, "\x1b[31mNot found valid update set! File is corrupt or incorrect!\x1b[0m\n\n");
+	printf("Getting region map...\n");
+
+	// determine firm cia device (n3ds/o3ds)
+	for(auto it : filesDirs)
+	{
+		if(!it.isDir)
+		{
+
+			f.open(u"/updates/" + it.name, FS_OPEN_READ);
+			if((res = AM_GetCiaFileInfo(MEDIATYPE_NAND, &ciaFileInfo, f.getFileHandle())))
+				throw titleException(_FILE_, __LINE__, res, "Failed to get CIA file info!");
+
+			if (devices.find(ciaFileInfo.titleID) == devices.end()) {
+				continue;
+			} else {
+				regions = devices.find(ciaFileInfo.titleID)->second;
+			}
+		}
 	}
+
+	if (regions.empty()){
+		throw titleException(_FILE_, __LINE__, res, "\x1b[31mDid not find known firmware files!\x1b[0m\n");
+	}
+
+	printf("Getting hash map...\n");
+
+	//determine home menu cia for region
+	for(auto it : filesDirs)
+	{
+		if(!it.isDir)
+		{
+
+			f.open(u"/updates/" + it.name, FS_OPEN_READ);
+			if((res = AM_GetCiaFileInfo(MEDIATYPE_NAND, &ciaFileInfo, f.getFileHandle())))
+				throw titleException(_FILE_, __LINE__, res, "Failed to get CIA file info!");
+
+			if (regions.find(ciaFileInfo.titleID) == regions.end()) {
+				continue;
+			} else {
+			 	hashes = regions.find(ciaFileInfo.titleID)->second;
+				if(filesDirs.size() > hashes.size()) throw titleException(_FILE_, __LINE__, res, "Too many titles in /updates/ found!\n");
+				if(filesDirs.size() < hashes.size()) throw titleException(_FILE_, __LINE__, res, "Too few titles in /updates/ found!\n");
+			}
+		}
+	}
+
+	if (hashes.empty()){
+		throw titleException(_FILE_, __LINE__, res, "\x1b[31mDid not find known firmware files!\x1b[0m\n");
+	}
+
+	printf("Checking hashes...\n\n");
+
+	//check hashmap
+	for(auto it : filesDirs)
+	{
+		if(!it.isDir){
+
+			f.open(u"/updates/" + it.name, FS_OPEN_READ);
+			if((res = AM_GetCiaFileInfo(MEDIATYPE_NAND, &ciaFileInfo, f.getFileHandle())))
+				throw titleException(_FILE_, __LINE__, res, "Failed to get CIA file info!");
+
+			printf("0x%016" PRIx64, ciaFileInfo.titleID);
+
+			cmphash = hashes.find(ciaFileInfo.titleID)->second;
+			ciaSize = f.size();
+
+			Buffer<u8> shaBuffer(ciaSize, false);
+
+			if((res = FSFILE_Read(f.getFileHandle(), &bytesRead, offset, &shaBuffer, ciaSize)))
+				throw fsException(_FILE_, __LINE__, res, "Failed to read from file!");
+
+			if((res = FSUSER_UpdateSha256Context(&shaBuffer, ciaSize, calchash)))
+				throw titleException(_FILE_, __LINE__, res, "FSUSER_UpdateSha256Context() failed!");
+
+			if(memcmp(cmphash.data(), calchash, 32)==0){
+				printf("\x1b[32m  Verified\x1b[0m\n");
+			} else {
+				throw titleException(_FILE_, __LINE__, res, "\x1b[31mHash mismatch! File is corrupt or incorrect!\x1b[0m\n\n");
+			}
+
+		}
+	}
+
 	printf("\n\n\x1b[32mVerified firmware files successfully!\n\n\x1b[0m\n\n");
 	printf("Installing firmware files...\n");
-
 	for(auto it : filesDirs)
 	{
 		if(!it.isDir)
@@ -297,12 +301,9 @@ void installUpdates(bool downgrade)
 		bool nativeFirm = it.entry.titleID == 0x0004013800000002LL || it.entry.titleID == 0x0004013820000002LL;
 		if(nativeFirm)
 		{
-			printf("NATIVE_FIRM         ");
+			printf("\nNATIVE_FIRM (0x%016" PRIx64 ")", it.entry.titleID);
 		} else {
-			tmpStr.clear();
-			utf16_to_utf8((u8*) &tmpStr, (u16*) it.name.c_str(), 255);
-
-			printf("%s", &tmpStr);
+			printf("0x%016" PRIx64, it.entry.titleID);
 		}
 
 		if(it.requiresDelete) deleteTitle(MEDIATYPE_NAND, it.entry.titleID);
@@ -358,17 +359,15 @@ int main()
 
 					if (getAMu() != 0) {
 						printf("\x1b[31mDid not get am:u handle, please reboot\x1b[0m\n\n");
-						while (aptMainLoop()) {
-							svcSleepThread(10000000000LL);
-						}
-      		}
+						return 0;
+					}
 
 					if (mode == 0) {
-						printf("Beginning downgrade...\n\n");
+						printf("Beginning downgrade...\n");
 						installUpdates(true);
 						printf("\n\nUpdates installed; rebooting in 10 seconds...\n");
 					} else if (mode == 1) {
-						printf("Beginning update...\n\n");
+						printf("Beginning update...\n");
 						installUpdates(false);
 						printf("\n\nUpdates installed; rebooting in 10 seconds...\n");
 					} else {
@@ -385,13 +384,13 @@ int main()
 				{
 					printf("\n%s\n", e.what());
 					printf("Did you store the update files in '/updates'?\n");
-					printf("Please reboot.");
+					printf("Press (B) to exit.");
 					once = true;
 				}
 				catch(titleException& e)
 				{
 					printf("\n%s\n", e.what());
-					printf("Please reboot.");
+					printf("Press (B) to exit.");
 					once = true;
 				}
 			}
