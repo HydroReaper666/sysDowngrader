@@ -22,9 +22,6 @@
 
 #include <cstring>
 #include <3ds.h>
-#include "fs.h"
-
-
 
 template<class T>
 class Buffer
@@ -44,7 +41,16 @@ public:
 	T& operator [](u32 element) {return ptr[element];}
 };
 
-bool fileNameCmp(fs::DirEntry& first, fs::DirEntry& second);
+class Logging {
+  FILE *lgf;
+  public:
+    Logging();
+    ~Logging();
+    void logprintf(const char *fmt, ...);
+		void logsnprintf(char *str, size_t sz, const char *fmt, ...);
+};
+
+extern Logging *logging;
 
 int getAMu();
 

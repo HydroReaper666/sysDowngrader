@@ -95,6 +95,7 @@ extern "C"
 		gfxExit();
 		aptExit();
 		srvExit();
+		delete logging;
 	}
 }
 
@@ -138,7 +139,7 @@ void installUpdates(bool downgrade)
 	AM_TitleEntry ciaFileInfo;
 	fs::File f;
 
-	printf("Getting firmware files information...\n\n");
+	logging->logprintf("Getting firmware files information...\n\n");
 
 	// determine firm cia version
 	for(auto it : filesDirs)
@@ -159,9 +160,9 @@ void installUpdates(bool downgrade)
 				throw titleException(_FILE_, __LINE__, res, "Installing O3DS pack >6.0 on N3DS will always brick!");
 
 			if(ciaFileInfo.titleID == 0x0004013800000002LL && is_n3ds == 1 && ciaFileInfo.version < 11872){
-				printf("Installing O3DS pack on N3DS will brick unless you swap the NCSD and crypto slot!\n");
-				printf("!! DO NOT CONTINUE UNLESS !!\n!! YOU ARE ON A9LH OR REDNAND !!\n\n");
-				printf("(A) continue\n(B) cancel\n\n");
+				logging->logprintf("Installing O3DS pack on N3DS will brick unless you swap the NCSD and crypto slot!\n");
+				logging->logprintf("!! DO NOT CONTINUE UNLESS !!\n!! YOU ARE ON A9LH OR REDNAND !!\n\n");
+				logging->logprintf("(A) continue\n(B) cancel\n\n");
 				while(aptMainLoop())
 				{
 					hidScanInput();
@@ -174,7 +175,7 @@ void installUpdates(bool downgrade)
 				}
 			}
 
-			printf("Verifying firmware files...\n");
+			logging->logprintf("Verifying firmware files...\n");
 
 			if (firms.find(ciaFileInfo.version) == firms.end()) {
 				throw titleException(_FILE_, __LINE__, res, "\x1b[31mDid not find known firmware files!\x1b[0m\n");
@@ -184,7 +185,7 @@ void installUpdates(bool downgrade)
 		}
 	}
 
-	printf("Getting region map...\n");
+	logging->logprintf("Getting region map...\n");
 
 	// determine firm cia device (n3ds/o3ds)
 	for(auto it : filesDirs)
@@ -208,7 +209,7 @@ void installUpdates(bool downgrade)
 		throw titleException(_FILE_, __LINE__, res, "\x1b[31mDid not find known firmware files!\x1b[0m\n");
 	}
 
-	printf("Getting hash map...\n");
+	logging->logprintf("Getting hash map...\n");
 
 	//determine home menu cia for region
 	//also do region checking
@@ -251,7 +252,7 @@ void installUpdates(bool downgrade)
 		throw titleException(_FILE_, __LINE__, res, "\x1b[31mDid not find known firmware files!\x1b[0m\n");
 	}
 
-	printf("Checking hashes...\n\n");
+	logging->logprintf("Checking hashes...\n\n");
 
 	//check hashmap
 	for(auto it : filesDirs)
@@ -262,7 +263,7 @@ void installUpdates(bool downgrade)
 			if((res = AM_GetCiaFileInfo(MEDIATYPE_NAND, &ciaFileInfo, f.getFileHandle())))
 				throw titleException(_FILE_, __LINE__, res, "Failed to get CIA file info!");
 
-			printf("0x%016" PRIx64, ciaFileInfo.titleID);
+			logging->logprintf("0x%016" PRIx64, ciaFileInfo.titleID);
 
 			cmphash = hashes.find(ciaFileInfo.titleID)->second;
 			ciaSize = f.size();
@@ -276,7 +277,7 @@ void installUpdates(bool downgrade)
 				throw titleException(_FILE_, __LINE__, res, "FSUSER_UpdateSha256Context() failed!");
 
 			if(memcmp(cmphash.data(), calchash, 32)==0){
-				printf("\x1b[32m  Verified\x1b[0m\n");
+				logging->logprintf("\x1b[32m  Verified\x1b[0m\n");
 			} else {
 				throw titleException(_FILE_, __LINE__, res, "\x1b[31mHash mismatch! File is corrupt or incorrect!\x1b[0m\n\n");
 			}
@@ -284,8 +285,8 @@ void installUpdates(bool downgrade)
 		}
 	}
 
-	printf("\n\n\x1b[32mVerified firmware files successfully!\n\n\x1b[0m\n\n");
-	printf("Installing firmware files...\n");
+	logging->logprintf("\n\n\x1b[32mVerified firmware files successfully!\n\n\x1b[0m\n\n");
+	logging->logprintf("Installing firmware files...\n");
 	for(auto it : filesDirs)
 	{
 		if(!it.isDir)
@@ -318,15 +319,15 @@ void installUpdates(bool downgrade)
 		bool nativeFirm = it.entry.titleID == 0x0004013800000002LL || it.entry.titleID == 0x0004013820000002LL;
 		if(nativeFirm)
 		{
-			printf("\nNATIVE_FIRM (0x%016" PRIx64 ")", it.entry.titleID);
+			logging->logprintf("\nNATIVE_FIRM (0x%016" PRIx64 ")", it.entry.titleID);
 		} else {
-			printf("0x%016" PRIx64, it.entry.titleID);
+			logging->logprintf("0x%016" PRIx64, it.entry.titleID);
 		}
 
 		if(it.requiresDelete) deleteTitle(MEDIATYPE_NAND, it.entry.titleID);
 		installCia(u"/updates/" + it.name, MEDIATYPE_NAND);
 		if(nativeFirm && (res = AM_InstallFirm(it.entry.titleID))) throw titleException(_FILE_, __LINE__, res, "Failed to install NATIVE_FIRM!");
-		printf("\x1b[32m  Installed\x1b[0m\n");
+		logging->logprintf("\x1b[32m  Installed\x1b[0m\n");
 	}
 }
 
@@ -339,15 +340,15 @@ int main()
 
 	consoleInit(GFX_TOP, NULL);
 
-	printf("sysDowngrader\n\n");
-	printf("(A) update\n(Y) downgrade\n(X) test svchax\n(B) exit\n\n");
-	printf("Use the (HOME) button to exit the CIA version.\n");
-	printf("The installation cannot be aborted once started!\n\n\n");
-	printf("Credits:\n");
-	printf(" + profi200\n");
-	printf(" + aliaspider\n");
-	printf(" + AngelSL\n");
-	printf(" + Plailect\n\n");
+	logging->logprintf("sysDowngrader\n\n");
+	logging->logprintf("(A) update\n(Y) downgrade\n(X) test svchax\n(B) exit\n\n");
+	logging->logprintf("Use the (HOME) button to exit the CIA version.\n");
+	logging->logprintf("The installation cannot be aborted once started!\n\n\n");
+	logging->logprintf("Credits:\n");
+	logging->logprintf(" + profi200\n");
+	logging->logprintf(" + aliaspider\n");
+	logging->logprintf(" + AngelSL\n");
+	logging->logprintf(" + Plailect\n\n");
 
 
 	while(aptMainLoop())
@@ -375,20 +376,20 @@ int main()
 					consoleClear();
 
 					if (getAMu() != 0) {
-						printf("\x1b[31mDid not get am:u handle, please reboot\x1b[0m\n\n");
+						logging->logprintf("\x1b[31mDid not get am:u handle, please reboot\x1b[0m\n\n");
 						return 0;
 					}
 
 					if (mode == 0) {
-						printf("Beginning downgrade...\n");
+						logging->logprintf("Beginning downgrade...\n");
 						installUpdates(true);
-						printf("\n\nUpdates installed; rebooting in 10 seconds...\n");
+						logging->logprintf("\n\nUpdates installed; rebooting in 10 seconds...\n");
 					} else if (mode == 1) {
-						printf("Beginning update...\n");
+						logging->logprintf("Beginning update...\n");
 						installUpdates(false);
-						printf("\n\nUpdates installed; rebooting in 10 seconds...\n");
+						logging->logprintf("\n\nUpdates installed; rebooting in 10 seconds...\n");
 					} else {
-						printf("Tested svchax; rebooting in 10 seconds...\n");
+						logging->logprintf("Tested svchax; rebooting in 10 seconds...\n");
 					}
 
 					svcSleepThread(10000000000LL);
@@ -400,7 +401,6 @@ int main()
 				catch(fsException& e)
 				{
 					printf("\n%s\n", e.what());
-					printf("Did you store the update files in '/updates'?\n");
 					printf("Press (B) to exit.");
 					once = true;
 				}

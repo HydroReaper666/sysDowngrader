@@ -19,30 +19,60 @@
 
 #include <string>
 #include <3ds.h>
+#include <stdio.h>
+#include <stdarg.h>
 #include "misc.h"
 #include "fs.h"
 
 extern "C" {
-    Result svchax_init(bool patch_srv);
-    extern u32 __ctr_svchax;
-    extern u32 __ctr_svchax_srv;
+  Result svchax_init(bool patch_srv);
+  extern u32 __ctr_svchax;
+  extern u32 __ctr_svchax_srv;
 }
 
-// Simple std::sort() compar function for file names
-bool fileNameCmp(fs::DirEntry& first, fs::DirEntry& second)
-{
-	if(first.isDir && (!second.isDir)) return true;
-	else if((!first.isDir) && second.isDir) return false;
-
-
-	return (first.name.compare(second.name)<0);
+Logging::Logging(void) {
+  lgf = fopen("/sysDowngrader.log", "a");
+  if (nullptr != lgf) {
+    fprintf(lgf, "\n------------------------------------------------------------\n\n");
+    fflush(lgf);
+  }
 }
+
+Logging::~Logging(void) {
+  if (nullptr != lgf) {
+    fclose(lgf);
+  }
+}
+
+void Logging::logprintf(const char *fmt, ...) {
+  if (nullptr != lgf) {
+    va_list ap;
+    va_start(ap, fmt);
+    vprintf(fmt, ap);
+    vfprintf(lgf, fmt, ap);
+    fflush(lgf);
+    va_end(ap);
+  }
+}
+
+void Logging::logsnprintf(char *str, size_t sz, const char *fmt, ...) {
+  if (nullptr != lgf) {
+    va_list ap;
+    va_start(ap, fmt);
+    vprintf(fmt, ap);
+    vfprintf(lgf, fmt, ap);
+    fflush(lgf);
+    va_end(ap);
+  }
+}
+
+Logging *logging = new Logging();
 
 int getAMu() {
 
   Handle amHandle = 0;
 
-  printf("Checking for am:u...\n");
+  logging->logprintf("Checking for am:u...\n");
   // verify am:u access
   srvGetServiceHandleDirect(&amHandle, "am:u");
   if (amHandle) {
@@ -51,34 +81,34 @@ int getAMu() {
     sdmcArchiveInit();
     amInit();
     cfguInit();
-    printf("Initted services...\n");
+    logging->logprintf("Initted services...\n");
 
     svcCloseHandle(amHandle);
 
-    printf("\x1b[32mGot am:u handle!\x1b[0m\n\n");
+    logging->logprintf("\x1b[32mGot am:u handle!\x1b[0m\n\n");
     return 0;
   }
 
-  printf("Did not get am:u handle!\n\n");
-  printf("Attempting svchax...\n");
+  logging->logprintf("Did not get am:u handle!\n\n");
+  logging->logprintf("Attempting svchax...\n");
 
   // try to get arm11
   svchax_init(true);
-  printf("Initted svchax...\n\n");
+  logging->logprintf("Initted svchax...\n\n");
 
   aptInit();
 	fsInit();
 	sdmcArchiveInit();
 	amInit();
   cfguInit();
-  printf("Initted services...\n");
+  logging->logprintf("Initted services...\n");
 
-  printf("Checking for am:u...\n\n");
+  logging->logprintf("Checking for am:u...\n\n");
   // verify am:u access
   srvGetServiceHandleDirect(&amHandle, "am:u");
   if (amHandle) {
     svcCloseHandle(amHandle);
-    printf("\x1b[32mGot am:u handle!\x1b[0m\n\n");
+    logging->logprintf("\x1b[32mGot am:u handle!\x1b[0m\n\n");
     return 0;
   }
   return 1;

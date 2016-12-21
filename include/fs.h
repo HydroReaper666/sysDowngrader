@@ -26,6 +26,7 @@
 #include <vector>
 #include <cstdio>
 #include <3ds.h>
+#include "misc.h"
 
 #define FS_PATH_MAX_LENGTH         (0x106)
 #define MAX_BUF_SIZE               (0x200000) // 2 MB
@@ -45,7 +46,7 @@ public:
 	fsException(const char *file, const int line, const Result res, const char *desc)
 	{
     this->res = res;
-		snprintf(errStr, 255, "fsException:\n%s:%d: Result: 0x%X\n%s", file, line, (unsigned int)res, desc);
+		logging->logsnprintf(errStr, 255, "\nfsException:\n%s:%d: Result: 0x%X\n%s", file, line, (unsigned int)res, desc);
 	}
 
 	virtual const char* what() const noexcept {return errStr;}

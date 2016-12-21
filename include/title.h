@@ -25,6 +25,7 @@
 #include <vector>
 #include <cstdio>
 #include <3ds.h>
+#include "misc.h"
 
 class titleException : public std::exception
 {
@@ -36,7 +37,7 @@ public:
 	titleException(const char *file, const int line, const Result res, const char *desc)
 	{
     this->res = res;
-		snprintf(errStr, 255, "titleException:\n%s:%d: Result: 0x%X\n%s", file, line, (unsigned int)res, desc);
+		logging->logsnprintf(errStr, 255, "\ntitleException:\n%s:%d: Result: 0x%X\n%s", file, line, (unsigned int)res, desc);
 	}
 
 	virtual const char* what() const noexcept {return errStr;}
