@@ -50,6 +50,7 @@ int getAMu() {
     fsInit();
     sdmcArchiveInit();
     amInit();
+    cfguInit();
     printf("Initted services...\n");
 
     svcCloseHandle(amHandle);
@@ -69,6 +70,7 @@ int getAMu() {
 	fsInit();
 	sdmcArchiveInit();
 	amInit();
+  cfguInit();
   printf("Initted services...\n");
 
   printf("Checking for am:u...\n\n");

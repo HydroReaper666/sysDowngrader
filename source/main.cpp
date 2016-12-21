@@ -211,6 +211,7 @@ void installUpdates(bool downgrade)
 	printf("Getting hash map...\n");
 
 	//determine home menu cia for region
+	//also do region checking
 	for(auto it : filesDirs)
 	{
 		if(!it.isDir)
@@ -223,6 +224,22 @@ void installUpdates(bool downgrade)
 			if (regions.find(ciaFileInfo.titleID) == regions.end()) {
 				continue;
 			} else {
+
+				u64 home = regions.find(ciaFileInfo.titleID)->first;
+				u8 region;
+
+				if((res = CFGU_SecureInfoGetRegion(&region)))
+					throw titleException(_FILE_, __LINE__, res, "CFGU_SecureInfoGetRegion() failed!");
+
+				if ( (( home == 0x0004003000008202LL ) && ( region != CFG_REGION_JPN )) ||
+					 (( home == 0x0004003000008F02LL ) && ( region != CFG_REGION_USA )) ||
+					 (( home == 0x0004003000009802LL ) && ( region != CFG_REGION_EUR || CFG_REGION_AUS )) ||
+					 (( home == 0x000400300000A102LL ) && ( region != CFG_REGION_CHN )) ||
+					 (( home == 0x000400300000A902LL ) && ( region != CFG_REGION_KOR )) ||
+					 (( home == 0x000400300000B102LL ) && ( region != CFG_REGION_TWN )) ) {
+						 throw titleException(_FILE_, __LINE__, res, "\x1b[31mFirmware files are not for this device region!\x1b[0m\n");
+				}
+
 			 	hashes = regions.find(ciaFileInfo.titleID)->second;
 				if(filesDirs.size() > hashes.size()) throw titleException(_FILE_, __LINE__, res, "Too many titles in /updates/ found!\n");
 				if(filesDirs.size() < hashes.size()) throw titleException(_FILE_, __LINE__, res, "Too few titles in /updates/ found!\n");
