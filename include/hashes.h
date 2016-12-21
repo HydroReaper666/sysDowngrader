@@ -24,7 +24,8 @@
 #include <3ds.h>
 
 // generate the hashes in the correct format for copy + paste:
-// sha256sum *.cia | awk '{print "\{"0x$2LL "\", \"" $1 "\"\},}' 2>/dev/null
+// assumes <16 char tid>.cia
+// sha256sum *.cia | awk ' { printf "{0x"; gsub( /\.cia/, "", $2 ); printf $2; printf "LL, std::array<uint8_t,32>{"; gsub( /../, "0x&, ", $1 ); gsub( /..$/, "", $1 ); printf $1; ;printf "}},\n" }'
 
 std::unordered_map<u64, std::array<uint8_t,32>> oldHashes2_1_0E = {
 {0x0004001000022000LL, std::array<uint8_t,32>{0x6c, 0xd3, 0xe8, 0x74, 0x94, 0xb6, 0x7e, 0x87, 0x9d, 0x87, 0x96, 0xd6, 0x71, 0xa0, 0x84, 0xa1, 0xce, 0xcb, 0x98, 0x0f, 0x58, 0x1c, 0xeb, 0x4e, 0x7d, 0xc2, 0x4b, 0x81, 0x77, 0xf6, 0xaf, 0xb3}},
