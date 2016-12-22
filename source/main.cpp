@@ -234,7 +234,7 @@ void installUpdates(bool downgrade)
 
 				if ( (( home == 0x0004003000008202LL ) && ( region != CFG_REGION_JPN )) ||
 					 (( home == 0x0004003000008F02LL ) && ( region != CFG_REGION_USA )) ||
-					 (( home == 0x0004003000009802LL ) && ( region != CFG_REGION_EUR || CFG_REGION_AUS )) ||
+					 (( home == 0x0004003000009802LL ) && ( region != CFG_REGION_EUR ) && ( region != CFG_REGION_AUS )) ||
 					 (( home == 0x000400300000A102LL ) && ( region != CFG_REGION_CHN )) ||
 					 (( home == 0x000400300000A902LL ) && ( region != CFG_REGION_KOR )) ||
 					 (( home == 0x000400300000B102LL ) && ( region != CFG_REGION_TWN )) ) {
