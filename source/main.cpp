@@ -383,11 +383,11 @@ int main()
 					if (mode == 0) {
 						logging->logprintf("Beginning downgrade...\n");
 						installUpdates(true);
-						logging->logprintf("\n\nUpdates installed; rebooting in 10 seconds...\n");
+						logging->logprintf("\n\nUpdates installed; rebooting in 10 seconds...\n\n");
 					} else if (mode == 1) {
 						logging->logprintf("Beginning update...\n");
 						installUpdates(false);
-						logging->logprintf("\n\nUpdates installed; rebooting in 10 seconds...\n");
+						logging->logprintf("\n\nUpdates installed; rebooting in 10 seconds...\n\n");
 					} else {
 						logging->logprintf("Tested svchax; rebooting in 10 seconds...\n");
 					}
