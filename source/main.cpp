@@ -113,6 +113,7 @@ int versionCmp(std::vector<TitleInfo>& installedTitles, u64& titleID, u16 versio
 	return 1; // The title is not installed
 }
 
+
 // If downgrade is true we don't care about versions (except equal versions) and uninstall newer versions
 void installUpdates(bool downgrade)
 {
@@ -137,10 +138,6 @@ void installUpdates(bool downgrade)
 	TitleInstallInfo installInfo;
 	AM_TitleEntry ciaFileInfo;
 	fs::File f;
-
-	logging->logprintf("Deleting all pending titles from NAND...\n");
-	if((res = AM_DeleteAllPendingTitles(MEDIATYPE_NAND)))
-		throw titleException(_FILE_, __LINE__, res, "AM_DeleteAllPendingTitles() failed!");
 
 	logging->logprintf("Getting firmware files information...\n\n");
 
@@ -384,11 +381,11 @@ int main()
 					}
 
 					if (mode == 0) {
-						logging->logprintf("Beginning downgrade...\n\n");
+						logging->logprintf("Beginning downgrade...\n");
 						installUpdates(true);
 						logging->logprintf("\n\nUpdates installed; rebooting in 10 seconds...\n");
 					} else if (mode == 1) {
-						logging->logprintf("Beginning update...\n\n");
+						logging->logprintf("Beginning update...\n");
 						installUpdates(false);
 						logging->logprintf("\n\nUpdates installed; rebooting in 10 seconds...\n");
 					} else {
