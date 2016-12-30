@@ -21,7 +21,5 @@ I am not responsive for any damage to your device. Use this software at your own
 
 ## Credits
 
-+ written by profi200
-+ svchax written by aliaspider
-+ svchax support by AngelSL
-+ updated by Plailect
++ Plailect
++ profi200

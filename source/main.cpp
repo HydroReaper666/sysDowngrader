@@ -82,23 +82,6 @@ bool sortTitlesLowToHigh(const TitleInstallInfo &a, const TitleInstallInfo &b) {
 // Fix compile error. This should be properly initialized if you fiddle with the title stuff!
 u8 sysLang = 0;
 
-// Override the default service exit functions
-extern "C"
-{
-	void __appExit()
-	{
-		// Exit services
-		amExit();
-		sdmcArchiveExit();
-		fsExit();
-		hidExit();
-		gfxExit();
-		aptExit();
-		srvExit();
-		delete logging;
-	}
-}
-
 // Find title and compare versions. Returns CIA file version - installed title version
 int versionCmp(std::vector<TitleInfo>& installedTitles, u64& titleID, u16 version)
 {
@@ -334,6 +317,9 @@ void installUpdates(bool downgrade)
 int main()
 {
 	gfxInit(GSP_RGB565_OES, GSP_RGB565_OES, false);
+	sdmcArchiveInit();
+	amInit();
+	cfguInit();
 
 	bool once = false;
 	int mode;
@@ -342,19 +328,18 @@ int main()
 
 	logging->logprintf("sysDowngrader\n\n");
 	logging->logprintf("(A) update\n(Y) downgrade\n(X) test svchax\n(B) exit\n\n");
+	logging->logprintf("This app requires external k11 hax\n");
+	logging->logprintf("(such as fasthax) to have been run!\n\n");
 	logging->logprintf("Use the (HOME) button to exit the CIA version.\n");
-	logging->logprintf("The installation cannot be aborted once started!\n\n\n");
+	logging->logprintf("The installation cannot be aborted once started!\n\n");
 	logging->logprintf("Credits:\n");
-	logging->logprintf(" + profi200\n");
-	logging->logprintf(" + aliaspider\n");
-	logging->logprintf(" + AngelSL\n");
-	logging->logprintf(" + Plailect\n\n");
+	logging->logprintf(" + Plailect\n");
+	logging->logprintf(" + profi200\n\n");
 
 
 	while(aptMainLoop())
 	{
 		hidScanInput();
-
 
 		if(hidKeysDown() & KEY_B)
 			break;
@@ -416,5 +401,11 @@ int main()
 		gfxSwapBuffers();
 		gspWaitForVBlank();
 	}
+
+	amExit();
+	sdmcArchiveExit();
+	cfguExit();
+	gfxExit();
+
 	return 0;
 }

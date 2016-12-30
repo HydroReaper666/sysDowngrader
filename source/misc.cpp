@@ -73,43 +73,26 @@ int getAMu() {
   Handle amHandle = 0;
 
   logging->logprintf("Checking for am:u...\n");
-  // verify am:u access
-  srvGetServiceHandleDirect(&amHandle, "am:u");
-  if (amHandle) {
-    aptInit();
-    fsInit();
-    sdmcArchiveInit();
-    amInit();
-    cfguInit();
-    logging->logprintf("Initted services...\n");
-
-    svcCloseHandle(amHandle);
-
-    logging->logprintf("\x1b[32mGot am:u handle!\x1b[0m\n\n");
-    return 0;
-  }
-
-  logging->logprintf("Did not get am:u handle!\n\n");
-  logging->logprintf("Attempting svchax...\n");
-
-  // try to get arm11
-  svchax_init(true);
-  logging->logprintf("Initted svchax...\n\n");
-
-  aptInit();
-	fsInit();
-	sdmcArchiveInit();
-	amInit();
-  cfguInit();
-  logging->logprintf("Initted services...\n");
-
-  logging->logprintf("Checking for am:u...\n\n");
-  // verify am:u access
   srvGetServiceHandleDirect(&amHandle, "am:u");
   if (amHandle) {
     svcCloseHandle(amHandle);
     logging->logprintf("\x1b[32mGot am:u handle!\x1b[0m\n\n");
-    return 0;
+  } else {
+    logging->logprintf("Did not get am:u handle!\n\n");
+    return 1;
   }
-  return 1;
+
+  Handle fsHandle = 0;
+
+  logging->logprintf("Checking for fs:USER...\n");
+  srvGetServiceHandleDirect(&fsHandle, "fs:USER");
+  if (fsHandle) {
+    svcCloseHandle(fsHandle);
+    logging->logprintf("\x1b[32mGot fs:USER handle!\x1b[0m\n\n");
+  } else {
+    logging->logprintf("Did not get fs:USER handle!\n\n");
+    return 1;
+  }
+
+  return 0;
 }
